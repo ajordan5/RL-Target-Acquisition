@@ -13,11 +13,15 @@ class AgentGym:
         self.sense_num_rays = 10
         self.target_sense_increment = 2*self.target_sense_azimuth/self.sense_num_rays
         self.target_measurements = np.zeros((self.sense_num_rays, num_agents))
+        self.num_claimed_targets = 0
 
         self.speed = 0.3
         self.dt = 0.1
         self.reward = 0     # int32 reward that increments with each step
         self.done = 0       # int32 flip to one if sim reaches end criteria
+        self.time_reward = -1
+        self.exit_reward = -1000
+        self.target_reward = 5000
         
         # Setup figure
         self.fig, self.ax = plt.subplots()
@@ -49,13 +53,17 @@ class AgentGym:
 
     def step(self, omega):
         self.reset_measurements()
-        self.state += self.dynamics(omega)*self.dt # TODO wrap angle. See method used for measurements below
-        self.bounce()
-        self.search_targets()
-        self.update_reward()
+        self.propogate_state(omega)
+        self.check_bounds_and_angles()
+        if not self.done:
+            self.search_targets()
         return (self.full_state.astype(np.float32),
                 np.array(self.reward, np.int32), 
                 np.array(self.done, np.int32))
+
+    def propogate_state(self, omega):
+        self.state += self.dynamics(omega)*self.dt # TODO wrap angle. See method used for measurements below
+        self.reward += self.time_reward
         
     def dynamics(self, omega):
         xdot = self.speed * np.cos(self.theta)
@@ -65,8 +73,19 @@ class AgentGym:
                         [ydot],
                         [thetadot]])
 
+    def check_bounds_and_angles(self):
+        # Wrap angles pi to -pi and check if you left the world bounds. Declare done when you leave
+        self.state[2,:] = self.wrap_angle_pi2pi(self.state[2,:])
+        for i in range(self.num_agents):
+            x_i, y_i, theta_i = self.state[:,i]
+            
+            if(x_i > 1 or x_i < 0 or y_i > 1 or y_i < 0):
+                self.done = 1
+                self.reward += self.exit_reward
+
+
     def bounce(self):
-        # TODO replace this with done flag when they go out of bounds
+        # Not currently used. Bounces agents of walls if they leave bounds
         for i in range(self.num_agents):
             x_i, y_i, theta_i = self.state[:,i]
             
@@ -85,11 +104,12 @@ class AgentGym:
                     self.state[1,i] = 1
 
     def update_reward(self):
-        self.reward += 1 # TODO
+        self.reward -= 1 # TODO
 
     def search_targets(self):
         for agent_i in range(self.num_agents):
             for target_i in range(self.num_targets):
+                target_i -= self.num_claimed_targets
                 diff = self.targets[:,target_i] - self.state[0:2, agent_i] 
                 dist_to_target = np.linalg.norm(diff)
                 angle_to_target = np.arctan2(diff[1], diff[0])
@@ -97,6 +117,11 @@ class AgentGym:
                 if(dist_to_target < self.target_sense_dist and abs(measurement_angle) < self.target_sense_azimuth):
                     self.target_plot = self.ax.scatter(self.targets[0, target_i], self.targets[1, target_i], color='r')
                     self.add_target_measurement(measurement_angle, dist_to_target, agent_i)
+
+                    if (dist_to_target < self.speed*self.dt):
+                        self.reward += self.target_reward
+                        self.targets = np.delete(self.targets, target_i, axis=1)
+                        self.num_claimed_targets +=1
 
     def init_targets(self):
         self.targets = np.random.uniform(size=self.targets.shape)
@@ -107,7 +132,7 @@ class AgentGym:
         self.target_measurements[ray_i, agent_i] = distance
 
     def reset_measurements(self):
-        self.target_measurements = np.zeros((self.sense_num_rays, self.num_agents))
+        self.target_measurements = np.ones((self.sense_num_rays, self.num_agents))
 
     def plot(self):
         if self.state_plot:
@@ -134,9 +159,12 @@ if __name__ == "__main__":
     # gym.plot()
 
     gym = AgentGym(1)
-    for i in range(100):
+    gym.state[2] = 0.5
+    done = 0
+    while not done:
         omega  = np.random.normal(0, 1)
         ret = gym.step(np.array([omega]))
+        done = ret[2]
         print(ret)
         gym.plot()
         plt.pause(0.1)
