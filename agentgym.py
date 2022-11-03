@@ -22,6 +22,7 @@ class AgentGym:
         self.time_reward = -1
         self.exit_reward = -1000
         self.target_reward = 5000
+        self.num_actions = num_agents #number of inputs for agents
         
         # Setup figure
         self.fig, self.ax = plt.subplots()
@@ -32,6 +33,10 @@ class AgentGym:
 
         # Setup sim
         self.init_targets()
+
+    @property
+    def actions(self):
+        return self.num_actions
 
     @property
     def theta(self):
@@ -50,6 +55,13 @@ class AgentGym:
         # Agent states combined with measurements in one column vector
         combined = np.concatenate((self.state, self.target_measurements), axis=0).reshape(-1,1)
         return combined
+
+    def reset(self, ):
+        self.state = np.zeros((3,self.num_agents))
+        self.num_claimed_targets = 0
+        self.init_targets()
+        self.reward = 0
+
 
     def step(self, omega):
         self.reset_measurements()
