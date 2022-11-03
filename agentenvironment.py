@@ -26,3 +26,6 @@ class AgentEnvironment(Environment):
         next_state, reward, terminal = self.agent.step(actions)
         next_state = next_state.reshape((-1,))
         return next_state, terminal, reward
+    
+    def plot(self):
+        self.agent.plot()

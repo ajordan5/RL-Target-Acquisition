@@ -61,6 +61,7 @@ class AgentGym:
         self.num_claimed_targets = 0
         self.init_targets()
         self.reward = 0
+        self.done = 0
 
 
     def step(self, omega):

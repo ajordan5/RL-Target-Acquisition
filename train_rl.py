@@ -2,21 +2,18 @@ from tensorforce.agents import Agent
 from tensorforce import Runner
 from agentenvironment import AgentEnvironment
 from tensorboard import program
-
-
-
-
 from tensorboard import program
-
-tracking_address = "summaries/run"
-
-tb = program.TensorBoard()
-tb.configure(argv=[None, '--logdir', tracking_address])
-url = tb.launch()
-print(f"Tensorflow listening on {url}")
+import matplotlib.pyplot as plt
 
 
-def trainRLModel():
+
+def trainRLModel(num_training_episodes, save_model):
+    tracking_address = "summaries/run"
+
+    tb = program.TensorBoard()
+    tb.configure(argv=[None, '--logdir', tracking_address])
+    url = tb.launch()
+    print(f"Tensorflow listening on {url}")
 
     environment = AgentEnvironment(1)
 
@@ -58,10 +55,32 @@ def trainRLModel():
     runner = Runner(agent=agent, environment=environment, max_episode_timesteps=200)
 
     # Train for 500 episodes
-    runner.run(num_episodes=500)
+    runner.run(num_episodes=num_training_episodes)
     runner.close()
 
-    agent.save(directory = 'saved_models', format = 'numpy')
+    if save_model:
+        agent.save(directory = 'saved_models', format = 'numpy')
+    
+    return agent, environment
+
+def runModel(agent, environment, max_time_steps):
+    state = environment.reset()
+    done = 0
+    total_reward = 0
+    while not done:
+        omega  = agent.act(state, independent = True)
+        next_state, done, reward = environment.execute(omega)
+        print(done)
+        total_reward += reward
+        state = next_state
+        environment.plot()
+        plt.pause(0.1)
+    
+    print(total_reward)
+
 
 if __name__ == '__main__':
-    trainRLModel()
+    num_training_episodes = 100
+    agent, environment = trainRLModel(num_training_episodes, True)
+    max_time_steps = 200
+    runModel(agent, environment, max_time_steps)
