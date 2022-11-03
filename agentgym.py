@@ -39,6 +39,10 @@ class AgentGym:
         return self.num_actions
 
     @property
+    def observations(self): #this function returns np arrays of the min measurment values and the max measurment values
+        return np.zeros_like(self.full_state).reshape((-1,)), np.ones_like(self.full_state).reshape((-1,))
+
+    @property
     def theta(self):
         return self.state[2,:]
 
@@ -63,6 +67,7 @@ class AgentGym:
         self.init_targets()
         self.reward = 0
         self.done = 0
+        return self.full_state
 
 
     def step(self, omega):
