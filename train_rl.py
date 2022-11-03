@@ -69,8 +69,8 @@ def runModel(agent, environment, max_time_steps):
     total_reward = 0
     while not done:
         omega  = agent.act(state, independent = True)
+        print(omega)
         next_state, done, reward = environment.execute(omega)
-        print(done)
         total_reward += reward
         state = next_state
         environment.plot()
@@ -80,7 +80,7 @@ def runModel(agent, environment, max_time_steps):
 
 
 if __name__ == '__main__':
-    num_training_episodes = 100
+    num_training_episodes = 500
     agent, environment = trainRLModel(num_training_episodes, True)
     max_time_steps = 200
     runModel(agent, environment, max_time_steps)

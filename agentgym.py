@@ -59,6 +59,7 @@ class AgentGym:
     def reset(self, ):
         self.state = np.zeros((3,self.num_agents))
         self.num_claimed_targets = 0
+        self.targets = np.zeros((2,self.num_targets))
         self.init_targets()
         self.reward = 0
         self.done = 0
@@ -137,6 +138,7 @@ class AgentGym:
                         self.num_claimed_targets +=1
 
     def init_targets(self):
+        self.ax.clear()
         self.targets = np.random.uniform(size=self.targets.shape)
         self.ax.scatter(self.targets[0,:], self.targets[1,:], color='g')
 
