@@ -7,7 +7,7 @@ class AgentGym:
         self.init_state = np.array([[0.5,0.5,0]]).T
         self.state = np.tile(self.init_state, num_agents)
         self.num_agents = num_agents
-        self.num_targets = 5
+        self.num_targets = 25
         self.targets = np.zeros((2,self.num_targets))
 
         self.target_sense_dist = 0.2
@@ -69,6 +69,7 @@ class AgentGym:
 
 
     def step(self, omega):
+        self.reward = 0
         self.reset_measurements()
         self.propogate_state(omega)
         self.check_bounds_and_angles()
@@ -132,11 +133,11 @@ class AgentGym:
                 dist_to_target = np.linalg.norm(diff)
                 angle_to_target = np.arctan2(diff[1], diff[0])
                 measurement_angle = self.wrap_angle_pi2pi(angle_to_target - self.state[2, agent_i])
-                if(dist_to_target < self.target_sense_dist and abs(measurement_angle) < self.target_sense_azimuth):
-                    self.claimed_plot = self.ax.scatter(self.targets[0, target_i], self.targets[1, target_i], color='r')
+                if(dist_to_target < self.target_sense_dist and abs(measurement_angle) < self.target_sense_azimuth):                    
                     self.add_target_measurement(measurement_angle, dist_to_target, agent_i)
 
                     if (dist_to_target < self.speed*self.dt):
+                        self.claimed_plot = self.ax.scatter(self.targets[0, target_i], self.targets[1, target_i], color='r')
                         self.reward += self.target_reward
                         targets_to_delete.append(target_i)
             self.targets = np.delete(self.targets, targets_to_delete, axis=1)
@@ -160,6 +161,7 @@ class AgentGym:
         if self.state_plot:
             self.state_plot.remove()
         self.state_plot = self.ax.scatter(self.x, self.y, color='k')
+        plt.pause(0.05)
         # plt.show()
 
     @staticmethod

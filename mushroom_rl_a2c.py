@@ -12,7 +12,6 @@ import numpy as np
 from tqdm import trange
 
 from mushroom_rl.core import Core, Logger
-from mushroom_rl.environments import Gym
 from mushroom_rl.algorithms.actor_critic import A2C
 
 from mushroom_rl.policy import GaussianTorchPolicy
@@ -59,6 +58,7 @@ def experiment(alg, environment, n_epochs, n_steps, n_steps_per_fit, n_step_test
                          optimizer={'class': optim.RMSprop,
                                     'params': {'lr': 7e-4,
                                                'eps': 1e-5}},
+                         use_cuda=True,
                          loss=F.mse_loss,
                          n_features=64,
                          batch_size=64,
@@ -88,6 +88,9 @@ def experiment(alg, environment, n_epochs, n_steps, n_steps_per_fit, n_step_test
     for it in trange(n_epochs):
         core.learn(n_steps=n_steps, n_steps_per_fit=n_steps_per_fit)
         dataset = core.evaluate(n_steps=n_step_test, render=False)
+        if it % 2 == 0:
+            agent.save('saved_models/model',full_save = True)
+
 
         J = np.mean(compute_J(dataset, environment.info.gamma))
         R = np.mean(compute_J(dataset))
@@ -108,7 +111,7 @@ if __name__ == '__main__':
     policy_params = dict(
         std_0=1.,
         n_features=64,
-        use_cuda=False
+        use_cuda=True
     )
 
     a2c_params = dict(actor_optimizer={'class': optim.RMSprop,
@@ -134,4 +137,9 @@ if __name__ == '__main__':
                    policy_params=policy_params)
     # agent = loadModel('saved_models/model')
     # core = Core(agent, environment)
-    # core.evaluate(n_episodes=5, render=True)
+    # dataset = core.evaluate(n_episodes=1, render=True)
+    # J = np.mean(compute_J(dataset, environment.info.gamma))
+    # R = np.mean(compute_J(dataset))
+    # E = agent.policy.entropy()
+
+    # print(J, R, E)
