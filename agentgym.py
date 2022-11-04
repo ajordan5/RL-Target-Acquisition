@@ -1,9 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.integrate import odeint
 
 class AgentGym:
     def __init__(self, num_agents):
-        self.state = np.zeros((3,num_agents))
+        self.init_state = np.array([[0.5,0.5,0]]).T
+        self.state = np.tile(self.init_state, num_agents)
         self.num_agents = num_agents
         self.num_targets = 5
         self.targets = np.zeros((2,self.num_targets))
@@ -26,10 +28,7 @@ class AgentGym:
         
         # Setup figure
         self.fig, self.ax = plt.subplots()
-        self.ax.set_xlim(-.01, 1.01)
-        self.ax.set_ylim(-.01, 1.01)
         self.state_plot = None
-        self.target_plot = None
 
         # Setup sim
         self.init_targets()
@@ -61,8 +60,7 @@ class AgentGym:
         return combined
 
     def reset(self, ):
-        self.state = np.zeros((3,self.num_agents))
-        self.num_claimed_targets = 0
+        self.state = np.tile(self.init_state, self.num_agents)
         self.targets = np.zeros((2,self.num_targets))
         self.init_targets()
         self.reward = 0
@@ -81,16 +79,17 @@ class AgentGym:
                 np.array(self.done, np.int32))
 
     def propogate_state(self, omega):
-        self.state += self.dynamics(omega)*self.dt # TODO wrap angle. See method used for measurements below
+        next = odeint(self.dynamics, self.state.flatten(), [0, self.dt], args=(omega[0], self.speed,))
+        self.state[:,0] = next[1,:]
         self.reward += self.time_reward
-        
-    def dynamics(self, omega):
-        xdot = self.speed * np.cos(self.theta)
-        ydot = self.speed * np.sin(self.theta)
+
+    @staticmethod  
+    def dynamics(x, t, omega, speed):
+        theta = x[2]
+        xdot = speed * np.cos(theta)
+        ydot = speed * np.sin(theta)
         thetadot = omega
-        return np.block([[xdot],
-                        [ydot],
-                        [thetadot]])
+        return [xdot, ydot, thetadot]
 
     def check_bounds_and_angles(self):
         # Wrap angles pi to -pi and check if you left the world bounds. Declare done when you leave
@@ -127,25 +126,28 @@ class AgentGym:
 
     def search_targets(self):
         for agent_i in range(self.num_agents):
-            for target_i in range(self.num_targets):
-                target_i -= self.num_claimed_targets
+            targets_to_delete = []
+            for target_i in range(self.targets.shape[1]):
                 diff = self.targets[:,target_i] - self.state[0:2, agent_i] 
                 dist_to_target = np.linalg.norm(diff)
                 angle_to_target = np.arctan2(diff[1], diff[0])
                 measurement_angle = self.wrap_angle_pi2pi(angle_to_target - self.state[2, agent_i])
                 if(dist_to_target < self.target_sense_dist and abs(measurement_angle) < self.target_sense_azimuth):
-                    self.target_plot = self.ax.scatter(self.targets[0, target_i], self.targets[1, target_i], color='r')
+                    self.claimed_plot = self.ax.scatter(self.targets[0, target_i], self.targets[1, target_i], color='r')
                     self.add_target_measurement(measurement_angle, dist_to_target, agent_i)
 
                     if (dist_to_target < self.speed*self.dt):
                         self.reward += self.target_reward
-                        self.targets = np.delete(self.targets, target_i, axis=1)
-                        self.num_claimed_targets +=1
-
+                        targets_to_delete.append(target_i)
+            self.targets = np.delete(self.targets, targets_to_delete, axis=1)
+                
     def init_targets(self):
         self.ax.clear()
+        self.ax.set_xlim(-.01, 1.01)
+        self.ax.set_ylim(-.01, 1.01)
+
         self.targets = np.random.uniform(size=self.targets.shape)
-        self.ax.scatter(self.targets[0,:], self.targets[1,:], color='g')
+        self.target_plot = self.ax.scatter(self.targets[0,:], self.targets[1,:], color='g')
 
     def add_target_measurement(self, angle, distance, agent_i):
         ray_i = int(np.round(angle/self.target_sense_increment))
@@ -179,10 +181,20 @@ if __name__ == "__main__":
     # gym.plot()
 
     gym = AgentGym(1)
-    gym.state[2] = 0.5
+    # gym.state[2] = 0.5
     done = 0
     while not done:
         omega  = np.random.normal(0, 1)
+        ret = gym.step(np.array([omega]))
+        done = ret[2]
+        print(ret)
+        gym.plot()
+        plt.pause(0.1)
+
+    gym.reset()
+    done = 0
+    while not done:
+        omega  = np.random.normal(0, 2)
         ret = gym.step(np.array([omega]))
         done = ret[2]
         print(ret)
