@@ -72,7 +72,8 @@ class AgentGym:
         return self.full_state
 
 
-    def step(self, omega):        
+    def step(self, omega):  
+        omega = np.clip(omega, -1, 1) 
         self.reward = 0
         self.reset_measurements()
         self.propogate_state(omega)

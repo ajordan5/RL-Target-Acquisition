@@ -135,6 +135,7 @@ if __name__ == '__main__':
                    n_epochs=100, n_steps=30000, n_steps_per_fit=5,
                    n_step_test=5000, alg_params=params,
                    policy_params=policy_params)
+
     # agent = loadModel('saved_models/model')
     # core = Core(agent, environment)
     # dataset = core.evaluate(n_episodes=1, render=True)
