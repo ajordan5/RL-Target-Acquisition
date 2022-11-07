@@ -1,6 +1,5 @@
 from mushroom_rl.core import Environment, MDPInfo
 from mushroom_rl.utils.spaces import Box
-import time
 
 from agentgym import AgentGym
 
@@ -9,7 +8,7 @@ class TargetAcquisitionEnvironment(Environment):
 
         self.agentGym = AgentGym(num_agents)
 
-        action_space = Box(-10,10,(self.agentGym.actions,))
+        action_space = Box(-self.agentGym.max_omega,self.agentGym.max_omega,(self.agentGym.actions,))
 
         low_obs, high_obs = self.agentGym.observations
 
