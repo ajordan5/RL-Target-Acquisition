@@ -7,7 +7,7 @@ class AgentGym:
         self.init_state = np.array([[0.5,0.5,0]]).T
         self.state = np.tile(self.init_state, num_agents)
         self.num_agents = num_agents
-        self.num_targets = 10
+        self.num_targets = 1
         self.targets = np.zeros((2,self.num_targets))
 
         self.target_sense_dist = 0.2
@@ -64,6 +64,7 @@ class AgentGym:
 
     def reset(self, ):
         self.state = np.tile(self.init_state, self.num_agents)
+        self.state[2] = np.random.uniform(-np.pi,np.pi)
         self.targets = np.zeros((2,self.num_targets))
         self.init_targets()
         self.claimed = []
@@ -72,8 +73,9 @@ class AgentGym:
         return self.full_state
 
 
-    def step(self, omega):  
-        omega = np.clip(omega, -1, 1) 
+    def step(self, omega):
+        omega = np.clip(omega, -self.max_omega, self.max_omega) 
+        print(omega) 
         self.reward = 0
         self.reset_measurements()
         self.propogate_state(omega)

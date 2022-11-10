@@ -3,6 +3,8 @@ from target_acquisition_environment_mushroom_rl import TargetAcquisitionEnvironm
 from mushroom_rl.core import Core, Agent
 from torch import nn
 import torch
+
+
 class Network(nn.Module):
     def __init__(self, input_shape, output_shape, n_features, **kwargs):
         super(Network, self).__init__()
