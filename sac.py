@@ -9,7 +9,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from mushroom_rl.algorithms.actor_critic import SAC
-from mushroom_rl.core import Core, Logger, Agent
+from mushroom_rl.core import Core, Logger
 from mushroom_rl.utils.dataset import compute_J, parse_dataset
 
 from tqdm import trange
@@ -89,7 +89,8 @@ def experiment(alg, mdp, n_epochs, n_steps, n_steps_test):
     lr_alpha = 3e-4
 
     use_cuda = torch.cuda.is_available()
-    print(use_cuda)
+    if use_cuda:
+        print("Using CUDA")
 
     # Approximator
     actor_input_shape = mdp.info.observation_space.shape
@@ -138,6 +139,9 @@ def experiment(alg, mdp, n_epochs, n_steps, n_steps_test):
 
     core.learn(n_steps=initial_replay_size, n_steps_per_fit=initial_replay_size)
 
+    max_reward = 0
+    min_entropy = 10000
+
     for n in trange(n_epochs, leave=False):
         core.learn(n_steps=n_steps, n_steps_per_fit=1)
         dataset = core.evaluate(n_steps=n_steps_test, render=False)
@@ -149,7 +153,16 @@ def experiment(alg, mdp, n_epochs, n_steps, n_steps_test):
 
         logger.epoch_info(n+1, J=J, R=R, entropy=E)
 
-        agent.save('saved_models/model{}'.format(n%5),full_save = True)
+        file_name = 'saved_models/model{}'.format(n%5)        
+        agent.save(file_name,full_save = True)
+
+        if J > max_reward:
+            agent.save('saved_models/best_reward'.format(n%5),full_save = True)
+            max_reward = J
+
+        if E < min_entropy:
+            agent.save('saved_models/best_entropy'.format(n%5),full_save = True)
+            min_entropy = E
 
 
 
@@ -159,11 +172,11 @@ if __name__ == '__main__':
     gamma = 0.99
     mdp = TargetAcquisitionEnvironment(1,.99, 1000)
 
-    # experiment(alg=alg, mdp=mdp, n_epochs=100, n_steps=5000, n_steps_test=2000)
+    experiment(alg=alg, mdp=mdp, n_epochs=100, n_steps=5000, n_steps_test=2000)
 
 
-    agent = Agent.load('saved_models/model4')
-    core = Core(agent, mdp)
-    core.evaluate(n_episodes=5, render=True)
+    # agent = Agent.load('saved_models/model4')
+    # core = Core(agent, mdp)
+    # core.evaluate(n_episodes=5, render=True)
 
     
