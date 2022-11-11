@@ -9,12 +9,10 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from mushroom_rl.algorithms.actor_critic import SAC
-from mushroom_rl.core import Core, Logger
-from mushroom_rl.environments.gym_env import Gym
+from mushroom_rl.core import Core, Logger, Agent
 from mushroom_rl.utils.dataset import compute_J, parse_dataset
 
 from tqdm import trange
-from mushroom_rl.core import Agent
 
 from target_acquisition_environment_mushroom_rl import TargetAcquisitionEnvironment
 
@@ -91,6 +89,7 @@ def experiment(alg, mdp, n_epochs, n_steps, n_steps_test):
     lr_alpha = 3e-4
 
     use_cuda = torch.cuda.is_available()
+    print(use_cuda)
 
     # Approximator
     actor_input_shape = mdp.info.observation_space.shape
@@ -150,7 +149,7 @@ def experiment(alg, mdp, n_epochs, n_steps, n_steps_test):
 
         logger.epoch_info(n+1, J=J, R=R, entropy=E)
 
-        agent.save('saved_models/model',full_save = True)
+        agent.save('saved_models/model{}'.format(n%5),full_save = True)
 
 
 
@@ -163,7 +162,7 @@ if __name__ == '__main__':
     # experiment(alg=alg, mdp=mdp, n_epochs=100, n_steps=5000, n_steps_test=2000)
 
 
-    agent = Agent.load('saved_models/model')
+    agent = Agent.load('saved_models/model4')
     core = Core(agent, mdp)
     core.evaluate(n_episodes=5, render=True)
 

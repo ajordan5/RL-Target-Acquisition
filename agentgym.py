@@ -7,7 +7,7 @@ class AgentGym:
         self.init_state = np.array([[0.5,0.5,0]]).T
         self.state = np.tile(self.init_state, num_agents)
         self.num_agents = num_agents
-        self.num_targets = 1
+        self.num_targets = 10
         self.targets = np.zeros((2,self.num_targets))
 
         self.target_sense_dist = 0.2
@@ -75,7 +75,7 @@ class AgentGym:
 
     def step(self, omega):
         omega = np.clip(omega, -self.max_omega, self.max_omega) 
-        print(omega) 
+        # print(omega) 
         self.reward = 0
         self.reset_measurements()
         self.propogate_state(omega)
@@ -147,15 +147,13 @@ class AgentGym:
                         self.claimed.append([self.targets[0, target_i], self.targets[1, target_i]])
                         self.reward += self.target_reward
                         targets_to_delete.append(target_i)
+                        if len(self.claimed) == self.num_targets:
+                            self.done = 1
+
             self.targets = np.delete(self.targets, targets_to_delete, axis=1)
                 
     def init_targets(self):
-        self.ax.clear()
-        self.ax.set_xlim(-.01, 1.01)
-        self.ax.set_ylim(-.01, 1.01)
-
-        self.targets = np.random.uniform(size=self.targets.shape)
-        self.target_plot = self.ax.scatter(self.targets[0,:], self.targets[1,:], color='g')
+        self.targets = np.random.uniform(size=self.targets.shape, low=0.1, high=0.9)        
 
     def add_target_measurement(self, angle, distance, agent_i):
         ray_i = int(np.round(angle/self.target_sense_increment))
@@ -165,12 +163,16 @@ class AgentGym:
         self.target_measurements = np.ones((self.sense_num_rays, self.num_agents))
 
     def plot(self):
+        self.ax.clear()
+        self.ax.set_xlim(-.01, 1.01)
+        self.ax.set_ylim(-.01, 1.01)
         if self.state_plot:
             self.state_plot.remove()
         if len(self.claimed):
             targets_claimed = np.array(self.claimed)
             self.claimed_plot = self.ax.scatter(targets_claimed[:,0], targets_claimed[:,1], color='r')
         self.state_plot = self.ax.scatter(self.x, self.y, color='k')
+        self.target_plot = self.ax.scatter(self.targets[0,:], self.targets[1,:], color='g')
         plt.pause(0.05)
         # plt.show()
 
