@@ -16,20 +16,22 @@ class AgentGym:
         self.target_sense_increment = 2*self.target_sense_azimuth/self.sense_num_rays
         self.target_measurements = np.zeros((self.sense_num_rays, num_agents))
         self.num_claimed_targets = 0
-        self.target_radius = 0.075
+        self.target_radius = 0.04
         self.claimed = []
 
         self.speed = 0.3
-        self.max_omega = 2
+        self.max_omega = 6
         self.dt = 0.1
         self.reward = 0     # int32 reward that increments with each step
         self.done = 0       # int32 flip to one if sim reaches end criteria
-        self.time_reward = -2
+        self.time_reward = -10
         self.exit_reward = -200
         self.target_reward = 500
         self.num_actions = num_agents #number of inputs for agents
         
         # Setup figure
+        self.save_figs = False
+        self.frame_number = 0
         self.fig, self.ax = plt.subplots()
         self.state_plot = None
 
@@ -173,6 +175,9 @@ class AgentGym:
             self.claimed_plot = self.ax.scatter(targets_claimed[:,0], targets_claimed[:,1], color='r')
         self.state_plot = self.ax.scatter(self.x, self.y, color='k')
         self.target_plot = self.ax.scatter(self.targets[0,:], self.targets[1,:], color='g')
+        if self.save_figs:
+            self.fig.savefig("images/frame{}".format(self.frame_number))
+            self.frame_number +=1
         plt.pause(0.05)
         # plt.show()
 
