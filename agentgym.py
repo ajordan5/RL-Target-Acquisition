@@ -29,7 +29,7 @@ class AgentGym:
         self.target_reward = 500
         self.num_actions = num_agents #number of inputs for agents
 
-        self.grid_side_length = 10
+        self.grid_side_length = 25
         self.grid_positions_visited = np.zeros((self.grid_side_length,self.grid_side_length))
         
         # Setup figure
@@ -75,6 +75,7 @@ class AgentGym:
         self.claimed = []
         self.reward = 0
         self.done = 0
+        self.grid_positions_visited[:] = 0
         return self.full_state
 
 
