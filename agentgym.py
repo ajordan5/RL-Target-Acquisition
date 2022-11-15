@@ -64,7 +64,7 @@ class AgentGym:
     @property
     def full_state(self):
         # Agent states combined with measurements in one column vector
-        combined = np.concatenate((self.state, self.target_measurements), axis=0).reshape(-1,1)
+        combined = np.concatenate((self.state, self.target_measurements,self.grid_positions_visited.reshape(-1,1)), axis=0).reshape(-1,1)
         return combined
 
     def reset(self, ):
@@ -85,7 +85,6 @@ class AgentGym:
         self.reset_measurements()
         self.propogate_state(omega)
         self.check_bounds_and_angles()
-        self.record_grid_position()
         if not self.done:
             self.search_targets()
         return (self.full_state.astype(np.float32),
@@ -114,12 +113,19 @@ class AgentGym:
             if(x_i > 1 or x_i < 0 or y_i > 1 or y_i < 0):
                 self.done = 1
                 self.reward += self.exit_reward
+            else:
+                self.record_grid_position()
 
     def record_grid_position(self):
         grid_x_index = int(np.floor(self.x * self.grid_side_length))
         grid_y_index = int(np.floor(self.y * self.grid_side_length))
 
-        self.grid_positions_visited[grid_x_index, grid_y_index] = 1
+        
+        if self.grid_positions_visited[grid_x_index, grid_y_index] != 1:
+            self.grid_positions_visited[grid_x_index, grid_y_index] = 1
+        else:
+            self.reward -= 10
+
 
     def bounce(self):
         # Not currently used. Bounces agents of walls if they leave bounds
