@@ -28,6 +28,9 @@ class AgentGym:
         self.exit_reward = -200
         self.target_reward = 500
         self.num_actions = num_agents #number of inputs for agents
+
+        self.grid_side_length = 10
+        self.grid_positions_visited = np.zeros((self.grid_side_length,self.grid_side_length))
         
         # Setup figure
         self.save_figs = False
@@ -82,6 +85,7 @@ class AgentGym:
         self.reset_measurements()
         self.propogate_state(omega)
         self.check_bounds_and_angles()
+        self.record_grid_position()
         if not self.done:
             self.search_targets()
         return (self.full_state.astype(np.float32),
@@ -111,6 +115,11 @@ class AgentGym:
                 self.done = 1
                 self.reward += self.exit_reward
 
+    def record_grid_position(self):
+        grid_x_index = int(np.floor(self.x * self.grid_side_length))
+        grid_y_index = int(np.floor(self.y * self.grid_side_length))
+
+        self.grid_positions_visited[grid_x_index, grid_y_index] = 1
 
     def bounce(self):
         # Not currently used. Bounces agents of walls if they leave bounds
@@ -175,10 +184,24 @@ class AgentGym:
             self.claimed_plot = self.ax.scatter(targets_claimed[:,0], targets_claimed[:,1], color='r')
         self.state_plot = self.ax.scatter(self.x, self.y, color='k')
         self.target_plot = self.ax.scatter(self.targets[0,:], self.targets[1,:], color='g')
+        
+        for i in range(self.grid_positions_visited.shape[0]):
+            for j in range(self.grid_positions_visited.shape[1]):
+                cell = self.grid_positions_visited[i,j]
+                if cell == 1:
+                    
+                    left_bound = i / self.grid_side_length
+                    right_bound = (i + 1) / self.grid_side_length
+                    bottom_bound = j / self.grid_side_length
+                    top_bound = (j + 1) / self.grid_side_length
+
+                    self.ax.fill_between([left_bound, right_bound], [top_bound, top_bound], [bottom_bound, bottom_bound], alpha = .2, color="tab:blue")
+
         if self.save_figs:
             self.fig.savefig("images/frame{}".format(self.frame_number))
             self.frame_number +=1
         plt.pause(0.05)
+        x=9
         # plt.show()
 
     @staticmethod
