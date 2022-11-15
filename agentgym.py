@@ -124,8 +124,9 @@ class AgentGym:
         
         if self.grid_positions_visited[grid_x_index, grid_y_index] != 1:
             self.grid_positions_visited[grid_x_index, grid_y_index] = 1
-        else:
-            self.reward -= 10
+            self.reward += 10
+        # else:
+            # self.reward -= 10
 
 
     def bounce(self):
