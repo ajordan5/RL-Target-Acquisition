@@ -75,7 +75,7 @@ class AgentGym:
     @property
     def full_state(self):
         # Agent states combined with measurements in one column vector
-        combined = np.concatenate((self.state, self.target_measurements, self.enemy_measurements), axis=0).reshape(-1,1)
+        combined = np.concatenate((self.state, self.target_measurements, self.enemy_measurements, self.grid_positions_visited.reshape(-1,1)), axis=0).reshape(-1,1)
         return combined
 
     def reset(self, ):
@@ -306,7 +306,7 @@ if __name__ == "__main__":
     # print(ret)
     # gym.plot()
 
-    gym = AgentGym(1, 20)
+    gym = AgentGym(1, 0)
     # gym.state[2] = 0.5
     done = 0
     while not done:

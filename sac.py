@@ -87,7 +87,7 @@ def experiment(alg, mdp, n_epochs, n_steps, n_steps_test):
     initial_replay_size = 64
     max_replay_size = 50000
     batch_size = 64
-    n_features = 64
+    n_features = 256
     warmup_transitions = 100
     tau = 0.005
     lr_alpha = 3e-4
@@ -176,11 +176,11 @@ if __name__ == '__main__':
     gamma = 0.99
     mdp = TargetAcquisitionEnvironment(1,.99, 1000)
 
-    experiment(alg=alg, mdp=mdp, n_epochs=100, n_steps=5000, n_steps_test=2000)
+    # experiment(alg=alg, mdp=mdp, n_epochs=100, n_steps=5000, n_steps_test=2000)
 
 
-    # agent = Agent.load('saved_models/best_reward')
-    # core = Core(agent, mdp)
-    # core.evaluate(n_episodes=5, render=True)
+    agent = Agent.load('saved_models/model0')
+    core = Core(agent, mdp)
+    core.evaluate(n_episodes=5, render=True)
 
     
