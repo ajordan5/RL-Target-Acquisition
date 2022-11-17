@@ -204,12 +204,28 @@ class AgentGym:
         self.target_measurements = np.ones((self.sense_num_rays, self.num_agents))
         if self.num_enemies:
             self.enemy_measurements = np.ones((self.sense_num_rays, self.num_agents))
+    
+    def plot_sensor_rays(self):
+        ray_off_set = -self.target_sense_azimuth
+        for i in range(self.sense_num_rays):
+            dist = self.target_measurements[i]
+            if dist == 1:
+                dist = self.target_sense_dist
+            angle = self.state[2] + ray_off_set
+            x1 = self.state[0]
+            y1 = self.state[1]
+            x2 = self.state[0] + dist * np.cos(angle)
+            y2 = self.state[1] + dist * np.sin(angle)
+            self.ax.plot([x1,x2],[y1,y2], color = 'blue')
+
+            ray_off_set += self.target_sense_increment 
 
     def plot(self):
         self.ax.clear()
         self.ax.set_xlim(-.01, 1.01)
         self.ax.set_ylim(-.01, 1.01)
 
+        self.plot_sensor_rays()
         if self.state_plot:
             self.state_plot.remove()
 
