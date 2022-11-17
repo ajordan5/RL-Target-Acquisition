@@ -209,14 +209,17 @@ class AgentGym:
         ray_off_set = -self.target_sense_azimuth
         for i in range(self.sense_num_rays):
             dist = self.target_measurements[i]
+            width = 1
             if dist == 1:
                 dist = self.target_sense_dist
+                width = .1
+
             angle = self.state[2] + ray_off_set
             x1 = self.state[0]
             y1 = self.state[1]
             x2 = self.state[0] + dist * np.cos(angle)
             y2 = self.state[1] + dist * np.sin(angle)
-            self.ax.plot([x1,x2],[y1,y2], color = 'blue')
+            self.ax.plot([x1,x2],[y1,y2], color = 'blue', linewidth = width)
 
             ray_off_set += self.target_sense_increment 
 
@@ -242,7 +245,7 @@ class AgentGym:
         if self.save_figs:
             self.fig.savefig("images/frame{}".format(self.frame_number))
             self.frame_number +=1
-        plt.pause(0.05)
+        plt.pause(0.2)
 
     @staticmethod
     def wrap_angle_pi2pi(angle):
