@@ -14,8 +14,8 @@ class AgentGym:
         self.targets = np.zeros((2,self.num_targets))
 
         self.target_sense_dist = 0.2
-        self.target_sense_azimuth = np.pi/4
-        self.sense_num_rays = 10
+        self.target_sense_azimuth = np.pi
+        self.sense_num_rays = 36
         self.target_sense_increment = 2*self.target_sense_azimuth/(self.sense_num_rays - 1)
         self.target_measurements = np.zeros((self.sense_num_rays, num_agents))        
         self.num_claimed_targets = 0
@@ -28,7 +28,7 @@ class AgentGym:
         self.reward = 0     # int32 reward that increments with each step
         self.done = 0       # int32 flip to one if sim reaches end criteria
         self.time_reward = -10
-        self.exit_reward = -200
+        self.exit_reward = -1000
         self.target_reward = 500
         self.num_actions = num_agents #number of inputs for agents
 
@@ -36,8 +36,8 @@ class AgentGym:
         self.grid_positions_visited = np.zeros((self.grid_side_length,self.grid_side_length))
         if num_enemies:
             self.enemies = Enemy(self.dt, num_enemies)
-            self.enemy_radius = 0.1
-            self.caught_reward = -200
+            self.enemy_radius = 0.03
+            self.caught_reward = -2000
             self.enemy_measurements = np.zeros((self.sense_num_rays, num_agents))
         else:
             self.enemy_measurements = np.array([[]]).T
@@ -254,6 +254,7 @@ class AgentGym:
         self.ax.clear()
         self.ax.set_xlim(-.01, 1.01)
         self.ax.set_ylim(-.01, 1.01)
+        self.ax.set_aspect('equal', 'box')
 
         self.plot_sensor_rays()
         if self.state_plot:
