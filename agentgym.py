@@ -28,7 +28,7 @@ class AgentGym:
         self.reward = 0     # int32 reward that increments with each step
         self.done = 0       # int32 flip to one if sim reaches end criteria
         self.time_reward = -10
-        self.exit_reward = -1000
+        self.exit_reward = -self.num_targets * 1000
         self.target_reward = 500
         self.num_actions = num_agents #number of inputs for agents
 
@@ -140,9 +140,9 @@ class AgentGym:
         
         if self.grid_positions_visited[grid_x_index, grid_y_index] != 1:
             self.grid_positions_visited[grid_x_index, grid_y_index] = 1
-            self.reward += 10
-        # else:
-            # self.reward -= 10
+            self.reward += 20
+        else:
+            self.reward -= 40
 
 
     def bounce(self):
