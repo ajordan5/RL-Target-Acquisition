@@ -85,12 +85,9 @@ class AgentGym:
         self.claimed = []
         self.reward = 0
         self.done = 0
-<<<<<<< HEAD
         self.grid_positions_visited[:] = 0
-=======
         if self.num_enemies:            
             self.enemies.reset()
->>>>>>> Add enemies and sense them
         return self.full_state
 
 
@@ -242,7 +239,6 @@ class AgentGym:
         self.state_plot = self.ax.scatter(self.x, self.y, color='k')
         self.target_plot = self.ax.scatter(self.targets[0,:], self.targets[1,:], color='g')
         
-<<<<<<< HEAD
         for i in range(self.grid_positions_visited.shape[0]):
             for j in range(self.grid_positions_visited.shape[1]):
                 cell = self.grid_positions_visited[i,j]
@@ -255,17 +251,11 @@ class AgentGym:
 
                     self.ax.fill_between([left_bound, right_bound], [top_bound, top_bound], [bottom_bound, bottom_bound], alpha = .2, color="tab:blue")
 
-=======
->>>>>>> Add enemies and sense them
         if self.save_figs:
             self.fig.savefig("images/frame{}".format(self.frame_number))
             self.frame_number +=1
         plt.pause(0.05)
-<<<<<<< HEAD
-        x=9
         # plt.show()
-=======
->>>>>>> Add enemies and sense them
 
     @staticmethod
     def wrap_angle_pi2pi(angle):
