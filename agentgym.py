@@ -224,18 +224,29 @@ class AgentGym:
     def plot_sensor_rays(self):
         ray_off_set = -self.target_sense_azimuth
         for i in range(self.sense_num_rays):
-            dist = self.target_measurements[i]
-            width = 1
-            if dist == 1:
-                dist = self.target_sense_dist
-                width = .1
+            dist_enemy = 1
+            if self.num_enemies > 0:
+                dist_enemy = self.enemy_measurements[i]
+            dist_target = self.target_measurements[i]
+            width_target = 1
+            if dist_target == 1:
+                dist_target = self.target_sense_dist
+                width_target = .1
 
             angle = self.state[2] + ray_off_set
+
             x1 = self.state[0]
             y1 = self.state[1]
-            x2 = self.state[0] + dist * np.cos(angle)
-            y2 = self.state[1] + dist * np.sin(angle)
-            self.ax.plot([x1,x2],[y1,y2], color = 'blue', linewidth = width)
+            if dist_enemy < 1:
+                x2_enemy = self.state[0] + dist_enemy * np.cos(angle)
+                y2_enemy = self.state[1] + dist_enemy * np.sin(angle)
+                width = 1
+                self.ax.plot([x1,x2_enemy],[y1,y2_enemy], color = 'red', linewidth = width)
+            else:
+                x2_target = self.state[0] + dist_target * np.cos(angle)
+                y2_target = self.state[1] + dist_target * np.sin(angle)
+                self.ax.plot([x1,x2_target],[y1,y2_target], color = 'blue', linewidth = width_target)
+
 
             ray_off_set += self.target_sense_increment 
 
@@ -273,12 +284,7 @@ class AgentGym:
         if self.save_figs:
             self.fig.savefig("images/frame{}".format(self.frame_number))
             self.frame_number +=1
-<<<<<<< HEAD
-        plt.pause(0.05)
-        # plt.show()
-=======
         plt.pause(0.2)
->>>>>>> updated plotting
 
     @staticmethod
     def wrap_angle_pi2pi(angle):
@@ -308,7 +314,7 @@ if __name__ == "__main__":
         done = ret[2]
         print(ret)
         gym.plot()
-        plt.pause(0.1)
+        # plt.pause(0.1)
 
     gym.reset()
     done = 0
@@ -318,4 +324,4 @@ if __name__ == "__main__":
         done = ret[2]
         print(ret)
         gym.plot()
-        plt.pause(0.1)
+        # plt.pause(0.1)
