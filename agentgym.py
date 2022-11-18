@@ -2,19 +2,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 
+from enemy import Enemy
+
 class AgentGym:
-    def __init__(self, num_agents):
+    def __init__(self, num_agents=1, num_enemies=0):
         self.init_state = np.array([[0.5,0.5,0]]).T
         self.state = np.tile(self.init_state, num_agents)
         self.num_agents = num_agents
+        self.num_enemies = num_enemies
         self.num_targets = 10
         self.targets = np.zeros((2,self.num_targets))
 
         self.target_sense_dist = 0.2
         self.target_sense_azimuth = np.pi/4
         self.sense_num_rays = 10
-        self.target_sense_increment = 2*self.target_sense_azimuth/self.sense_num_rays
-        self.target_measurements = np.zeros((self.sense_num_rays, num_agents))
+        self.target_sense_increment = 2*self.target_sense_azimuth/(self.sense_num_rays - 1)
+        self.target_measurements = np.zeros((self.sense_num_rays, num_agents))        
         self.num_claimed_targets = 0
         self.target_radius = 0.04
         self.claimed = []
@@ -31,6 +34,13 @@ class AgentGym:
 
         self.grid_side_length = 25
         self.grid_positions_visited = np.zeros((self.grid_side_length,self.grid_side_length))
+        if num_enemies:
+            self.enemies = Enemy(self.dt, num_enemies)
+            self.enemy_radius = 0.1
+            self.caught_reward = -200
+            self.enemy_measurements = np.zeros((self.sense_num_rays, num_agents))
+        else:
+            self.enemy_measurements = np.array([[]]).T
         
         # Setup figure
         self.save_figs = False
@@ -64,7 +74,7 @@ class AgentGym:
     @property
     def full_state(self):
         # Agent states combined with measurements in one column vector
-        combined = np.concatenate((self.state, self.target_measurements,self.grid_positions_visited.reshape(-1,1)), axis=0).reshape(-1,1)
+        combined = np.concatenate((self.state, self.target_measurements, self.enemy_measurements, self.grid_positions_visited.reshape(-1,1)), axis=0).reshape(-1,1)
         return combined
 
     def reset(self, ):
@@ -75,7 +85,12 @@ class AgentGym:
         self.claimed = []
         self.reward = 0
         self.done = 0
+<<<<<<< HEAD
         self.grid_positions_visited[:] = 0
+=======
+        if self.num_enemies:            
+            self.enemies.reset()
+>>>>>>> Add enemies and sense them
         return self.full_state
 
 
@@ -86,7 +101,10 @@ class AgentGym:
         self.reset_measurements()
         self.propogate_state(omega)
         self.check_bounds_and_angles()
-        if not self.done:
+        if self.num_enemies:
+            self.enemies.update()
+            self.search_enemies()
+        if not self.done:                
             self.search_targets()
         return (self.full_state.astype(np.float32),
                 np.array(self.reward, np.int32), 
@@ -152,6 +170,7 @@ class AgentGym:
         self.reward -= 1 # TODO
 
     def search_targets(self):
+        # TODO Repeated code with search enemy
         for agent_i in range(self.num_agents):
             targets_to_delete = []
             for target_i in range(self.targets.shape[1]):
@@ -160,7 +179,7 @@ class AgentGym:
                 angle_to_target = np.arctan2(diff[1], diff[0])
                 measurement_angle = self.wrap_angle_pi2pi(angle_to_target - self.state[2, agent_i])
                 if(dist_to_target < self.target_sense_dist and abs(measurement_angle) < self.target_sense_azimuth):                    
-                    self.add_target_measurement(measurement_angle, dist_to_target, agent_i)
+                    self.add_measurement(measurement_angle, dist_to_target, agent_i, self.target_measurements)
 
                     if (dist_to_target < self.target_radius):
                         self.claimed.append([self.targets[0, target_i], self.targets[1, target_i]])
@@ -170,29 +189,60 @@ class AgentGym:
                             self.done = 1
 
             self.targets = np.delete(self.targets, targets_to_delete, axis=1)
+
+
+    def search_enemies(self):
+        for agent_i in range(self.num_agents):
+            enemy_state = self.enemies.state
+            for enemy_i in range(enemy_state.shape[1]):
+                diff = enemy_state[:,enemy_i] - self.state[0:2, agent_i] 
+                dist_to_target = np.linalg.norm(diff)
+                angle_to_target = np.arctan2(diff[1], diff[0])
+                measurement_angle = self.wrap_angle_pi2pi(angle_to_target - self.state[2, agent_i])
+                if(dist_to_target < self.target_sense_dist and abs(measurement_angle) < self.target_sense_azimuth):                    
+                    self.add_measurement(measurement_angle, dist_to_target, agent_i, self.enemy_measurements)
+
+                    if (dist_to_target < self.enemy_radius):
+                        self.reward += self.caught_reward
+                        self.done = 1
                 
     def init_targets(self):
         self.targets = np.random.uniform(size=self.targets.shape, low=0.1, high=0.9)        
 
-    def add_target_measurement(self, angle, distance, agent_i):
-        ray_i = int(np.round(angle/self.target_sense_increment))
-        self.target_measurements[ray_i, agent_i] = distance
+    def add_measurement(self, angle, distance, agent_i, measurement_array):
+        # Assign measurement to a ray. Rays are shifted to be 2*azimuth to 0.
+        # measurements at -azimuth will be index 0 and those at azimuth will be index num_rays - 1
+        ray_i = int(np.round((self.target_sense_azimuth+angle)/self.target_sense_increment))
+        measurement_array[ray_i, agent_i] = distance
+
+    # def add_enemy_measurement(self, angle, distance, agent_i):
+    #     ray_i = int(np.round((self.target_sense_azimuth+angle)/self.target_sense_increment))
+    #     self.enemy_measurements[ray_i, agent_i] = distance
 
     def reset_measurements(self):
         self.target_measurements = np.ones((self.sense_num_rays, self.num_agents))
+        if self.num_enemies:
+            self.enemy_measurements = np.ones((self.sense_num_rays, self.num_agents))
 
     def plot(self):
         self.ax.clear()
         self.ax.set_xlim(-.01, 1.01)
         self.ax.set_ylim(-.01, 1.01)
+
         if self.state_plot:
             self.state_plot.remove()
+
         if len(self.claimed):
             targets_claimed = np.array(self.claimed)
             self.claimed_plot = self.ax.scatter(targets_claimed[:,0], targets_claimed[:,1], color='r')
+
+        if self.num_enemies:
+            self.enemies.plot(self.ax)
+        
         self.state_plot = self.ax.scatter(self.x, self.y, color='k')
         self.target_plot = self.ax.scatter(self.targets[0,:], self.targets[1,:], color='g')
         
+<<<<<<< HEAD
         for i in range(self.grid_positions_visited.shape[0]):
             for j in range(self.grid_positions_visited.shape[1]):
                 cell = self.grid_positions_visited[i,j]
@@ -205,12 +255,17 @@ class AgentGym:
 
                     self.ax.fill_between([left_bound, right_bound], [top_bound, top_bound], [bottom_bound, bottom_bound], alpha = .2, color="tab:blue")
 
+=======
+>>>>>>> Add enemies and sense them
         if self.save_figs:
             self.fig.savefig("images/frame{}".format(self.frame_number))
             self.frame_number +=1
         plt.pause(0.05)
+<<<<<<< HEAD
         x=9
         # plt.show()
+=======
+>>>>>>> Add enemies and sense them
 
     @staticmethod
     def wrap_angle_pi2pi(angle):
@@ -219,6 +274,7 @@ class AgentGym:
         while abs(angle) > 2*np.pi:
             angle -= 2*np.pi * np.sign(angle)
 
+        # Now pi to -pi
         if abs(angle) > np.pi:
             angle = -(2*np.pi - abs(angle)) * np.sign(angle)
 
@@ -230,7 +286,7 @@ if __name__ == "__main__":
     # print(ret)
     # gym.plot()
 
-    gym = AgentGym(1)
+    gym = AgentGym(1, 20)
     # gym.state[2] = 0.5
     done = 0
     while not done:
