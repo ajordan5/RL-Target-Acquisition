@@ -24,16 +24,19 @@ class CriticNetwork(nn.Module):
         n_input = input_shape[-1]
         n_output = output_shape[0]
 
+        self.num_states = state_shape
+        self.num_grids = grid_shape
+
         # Grid process
-        self.conv1 = nn.Conv2d(grid_shape, 6, 5)
+        self.conv1 = nn.Conv2d(1, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc1 = nn.Linear(144, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 32)
 
         # State process
-        self._h1 = nn.Linear(state_shape, n_features)
+        self._h1 = nn.Linear(state_shape[0]+1, n_features)
         self._h2 = nn.Linear(n_features, n_features)
         self._h3 = nn.Linear(n_features, n_features)
         self._h4 = nn.Linear(n_features, 32)
@@ -62,42 +65,111 @@ class CriticNetwork(nn.Module):
                                 gain=nn.init.calculate_gain('linear'))
 
     def forward(self, state, action):
-        state_action = torch.cat((state.float(), action.float()), dim=1)
 
-        vehicle_state = state[:self.state_shape]
-        grid_state = state[self.state_shape:]
-        features1 = F.relu(self._h1(state_action))
+        vehicle_state = state[:,:self.num_states[0]] 
+        vehicle_action = torch.cat((vehicle_state.float(), action.float()), dim=1)
+        grid_state = state[:, self.num_states[0]:]
+        grid_state = grid_state.reshape((64, 1, 25, 25)).float()
+
+        # Grid processing
+        grid_state = self.pool(F.relu(self.conv1(grid_state)))
+        grid_state = self.pool(F.relu(self.conv2(grid_state)))
+        grid_state = torch.flatten(grid_state, 1) # flatten all dimensions except batch
+        grid_state = F.relu(self.fc1(grid_state))
+        grid_state = F.relu(self.fc2(grid_state))
+        grid_out = self.fc3(grid_state)
+
+        # State Processing
+        features1 = F.relu(self._h1(vehicle_action))
         features2 = F.relu(self._h2(features1))
         features3 = F.relu(self._h3(features2))
-        q = self._h4(features3)
+        state_out = self._h4(features3)
 
-        return torch.squeeze(q)
+        combined = torch.cat((grid_out.float(), state_out.float()), dim=1)
+
+        # Combined process
+        features1 = F.relu(self._h5(combined))
+        features2 = F.relu(self._h6(features1))
+        features3 = F.relu(self._h7(features2))
+        combined_out = self._h8(features3)
+
+        return torch.squeeze(combined_out)
 
 
 class ActorNetwork(nn.Module):
-    def __init__(self, input_shape, output_shape, n_features, **kwargs):
+    def __init__(self, input_shape, output_shape, n_features, state_shape, grid_shape, **kwargs):
         super(ActorNetwork, self).__init__()
 
-        n_input = input_shape[-1]
         n_output = output_shape[0]
 
-        self._h1 = nn.Linear(n_input, n_features)
+        self.num_states = state_shape
+        self.num_grids = grid_shape
+
+        # Grid process
+        self.conv1 = nn.Conv2d(1, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.fc1 = nn.Linear(144, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 32)
+
+        # State process
+        self._h1 = nn.Linear(state_shape[0], n_features)
         self._h2 = nn.Linear(n_features, n_features)
-        self._h3 = nn.Linear(n_features, n_output)
+        self._h3 = nn.Linear(n_features, n_features)
+        self._h4 = nn.Linear(n_features, 32)
+
+        # Final process
+        self._h5 = nn.Linear(64, n_features)
+        self._h6 = nn.Linear(n_features, n_features)
+        self._h7 = nn.Linear(n_features, n_features)
+        self._h8 = nn.Linear(n_features, n_output)
 
         nn.init.xavier_uniform_(self._h1.weight,
                                 gain=nn.init.calculate_gain('relu'))
         nn.init.xavier_uniform_(self._h2.weight,
                                 gain=nn.init.calculate_gain('relu'))
         nn.init.xavier_uniform_(self._h3.weight,
+                                gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(self._h4.weight,
+                                gain=nn.init.calculate_gain('linear'))
+        nn.init.xavier_uniform_(self._h5.weight,
+                                gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(self._h6.weight,
+                                gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(self._h7.weight,
+                                gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(self._h8.weight,
                                 gain=nn.init.calculate_gain('linear'))
 
     def forward(self, state):
-        features1 = F.relu(self._h1(torch.squeeze(state, 1).float()))
-        features2 = F.relu(self._h2(features1))
-        a = self._h3(features2)
+        vehicle_state = state[:,:self.num_states[0]].float() 
+        grid_state = state[:, self.num_states[0]:]
+        grid_state = grid_state.reshape((-1, 1, 25, 25)).float()
 
-        return a
+        # Grid processing
+        grid_state = self.pool(F.relu(self.conv1(grid_state)))
+        grid_state = self.pool(F.relu(self.conv2(grid_state)))
+        grid_state = torch.flatten(grid_state, 1) # flatten all dimensions except batch
+        grid_state = F.relu(self.fc1(grid_state))
+        grid_state = F.relu(self.fc2(grid_state))
+        grid_out = self.fc3(grid_state)
+
+        # State Processing
+        features1 = F.relu(self._h1(vehicle_state))
+        features2 = F.relu(self._h2(features1))
+        features3 = F.relu(self._h3(features2))
+        state_out = self._h4(features3)
+
+        combined = torch.cat((grid_out.float(), state_out.float()), dim=1)
+
+        # Combined process
+        features1 = F.relu(self._h5(combined))
+        features2 = F.relu(self._h6(features1))
+        features3 = F.relu(self._h7(features2))
+        combined_out = self._h8(features3)
+
+        return combined_out
 
 
 def experiment(alg, mdp, n_epochs, n_steps, n_steps_test):
@@ -123,22 +195,29 @@ def experiment(alg, mdp, n_epochs, n_steps, n_steps_test):
         print("Using CUDA")
 
     # Approximator
+    
     actor_input_shape = mdp.info.observation_space.shape
+    grid_shape = 625
+    state_shape = (actor_input_shape[0] - grid_shape,)
     actor_mu_params = dict(network=ActorNetwork,
                            n_features=n_features,
                            input_shape=actor_input_shape,
                            output_shape=mdp.info.action_space.shape,
-                           use_cuda=use_cuda)
+                           use_cuda=use_cuda,
+                            grid_shape=grid_shape, state_shape=state_shape)
     actor_sigma_params = dict(network=ActorNetwork,
                               n_features=n_features,
                               input_shape=actor_input_shape,
                               output_shape=mdp.info.action_space.shape,
-                              use_cuda=use_cuda)
+                              use_cuda=use_cuda,
+                              grid_shape=grid_shape, state_shape=state_shape)
 
     actor_optimizer = {'class': optim.Adam,
                        'params': {'lr': 3e-4}}
 
+    
     critic_input_shape = (actor_input_shape[0] + mdp.info.action_space.shape[0],)
+    
     critic_params = dict(network=CriticNetwork,
                          optimizer={'class': optim.Adam,
                                     'params': {'lr': 3e-4}},
@@ -146,7 +225,8 @@ def experiment(alg, mdp, n_epochs, n_steps, n_steps_test):
                          n_features=n_features,
                          input_shape=critic_input_shape,
                          output_shape=(1,),
-                         use_cuda=use_cuda)
+                         use_cuda=use_cuda,
+                         grid_shape=grid_shape, state_shape=state_shape)
 
     # Agent
     agent = alg(mdp.info, actor_mu_params, actor_sigma_params,
@@ -202,7 +282,7 @@ if __name__ == '__main__':
     gamma = 0.99
     mdp = TargetAcquisitionEnvironment(1,.99, 1000)
 
-    # experiment(alg=alg, mdp=mdp, n_epochs=100, n_steps=5000, n_steps_test=2000)
+    # experiment(alg=alg, mdp=mdp, n_epochs=1000, n_steps=5000, n_steps_test=200)
 
 
     agent = Agent.load('saved_models/best_reward')

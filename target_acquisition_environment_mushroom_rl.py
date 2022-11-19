@@ -6,7 +6,7 @@ from agentgym import AgentGym
 class TargetAcquisitionEnvironment(Environment):
     def __init__(self, num_agents, gamma, horizon):
 
-        self.agentGym = AgentGym(num_agents, 50)
+        self.agentGym = AgentGym(num_agents, 1)
 
         action_space = Box(-self.agentGym.max_omega,self.agentGym.max_omega,(self.agentGym.actions,))
 

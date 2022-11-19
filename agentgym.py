@@ -10,7 +10,7 @@ class AgentGym:
         self.state = np.tile(self.init_state, num_agents)
         self.num_agents = num_agents
         self.num_enemies = num_enemies
-        self.num_targets = 50
+        self.num_targets = 10
         self.targets = np.zeros((2,self.num_targets))
 
         self.target_sense_dist = 0.2
