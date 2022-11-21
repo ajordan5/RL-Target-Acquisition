@@ -185,7 +185,7 @@ def experiment(alg, mdp, n_epochs, n_steps, n_steps_test):
     initial_replay_size = 64
     max_replay_size = 50000
     batch_size = 64
-    n_features = 64
+    n_features = 128
     warmup_transitions = 100
     tau = 0.005
     lr_alpha = 3e-4
@@ -250,6 +250,7 @@ def experiment(alg, mdp, n_epochs, n_steps, n_steps_test):
     core.learn(n_steps=initial_replay_size, n_steps_per_fit=initial_replay_size)
 
     max_reward = 0
+    max_undiscounted = 0
     min_entropy = 10000
 
     for n in trange(n_epochs, leave=False):
@@ -267,11 +268,18 @@ def experiment(alg, mdp, n_epochs, n_steps, n_steps_test):
         agent.save(file_name,full_save = True)
 
         if J > max_reward:
-            agent.save('saved_models/best_reward'.format(n%5),full_save = True)
+            agent.save('saved_models/best_reward',full_save = True)
             max_reward = J
 
+        if J > 4000:
+            agent.save('saved_models/great{}'.format(n%15),full_save = True)
+
+        if R > max_undiscounted:
+            agent.save('saved_models/best_undiscounted',full_save = True)
+            max_undiscounted = R
+
         if E < min_entropy:
-            agent.save('saved_models/best_entropy'.format(n%5),full_save = True)
+            agent.save('saved_models/best_entropy',full_save = True)
             min_entropy = E
 
 
@@ -282,11 +290,11 @@ if __name__ == '__main__':
     gamma = 0.99
     mdp = TargetAcquisitionEnvironment(1,.99, 1000)
 
-    # experiment(alg=alg, mdp=mdp, n_epochs=1000, n_steps=5000, n_steps_test=200)
+    experiment(alg=alg, mdp=mdp, n_epochs=3000, n_steps=5000, n_steps_test=2000)
 
 
-    agent = Agent.load('saved_models/best_reward')
-    core = Core(agent, mdp)
-    core.evaluate(n_episodes=5, render=True)
+    # agent = Agent.load('saved_models/best_undiscounted')
+    # core = Core(agent, mdp)
+    # core.evaluate(n_episodes=5, render=True)
 
     

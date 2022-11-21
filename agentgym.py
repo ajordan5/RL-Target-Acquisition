@@ -28,19 +28,17 @@ class AgentGym:
         self.reward = 0     # int32 reward that increments with each step
         self.done = 0       # int32 flip to one if sim reaches end criteria
         self.time_reward = -10
-        self.exit_reward = -1000
+        self.exit_reward = -4000
         self.target_reward = 500
         self.num_actions = num_agents #number of inputs for agents
 
         self.grid_side_length = 25
         self.grid_positions_visited = np.zeros((self.grid_side_length,self.grid_side_length))
-        if num_enemies:
-            self.enemies = Enemy(self.dt, num_enemies)
-            self.enemy_radius = 0.03
-            self.caught_reward = -2000
-            self.enemy_measurements = np.zeros((self.sense_num_rays, num_agents))
-        else:
-            self.enemy_measurements = np.array([[]]).T
+        
+        self.enemies = Enemy(self.dt, num_enemies)
+        self.enemy_radius = 0.03
+        self.caught_reward = -2000
+        self.enemy_measurements = np.zeros((self.sense_num_rays, num_agents))
         
         # Setup figure
         self.save_figs = False
@@ -86,8 +84,8 @@ class AgentGym:
         self.reward = 0
         self.done = 0
         self.grid_positions_visited[:] = 0
-        if self.num_enemies:            
-            self.enemies.reset()
+                  
+        self.enemies.reset()
         return self.full_state
 
 
@@ -98,9 +96,8 @@ class AgentGym:
         self.reset_measurements()
         self.propogate_state(omega)
         self.check_bounds_and_angles()
-        if self.num_enemies:
-            self.enemies.update()
-            self.search_enemies()
+        self.enemies.update()
+        self.search_enemies()
         if not self.done:                
             self.search_targets()
         return (self.full_state.astype(np.float32),
@@ -218,15 +215,15 @@ class AgentGym:
 
     def reset_measurements(self):
         self.target_measurements = np.ones((self.sense_num_rays, self.num_agents))
-        if self.num_enemies:
-            self.enemy_measurements = np.ones((self.sense_num_rays, self.num_agents))
+        
+        self.enemy_measurements = np.ones((self.sense_num_rays, self.num_agents))
     
     def plot_sensor_rays(self):
         ray_off_set = -self.target_sense_azimuth
         for i in range(self.sense_num_rays):
             dist_enemy = 1
-            if self.num_enemies > 0:
-                dist_enemy = self.enemy_measurements[i]
+            
+            dist_enemy = self.enemy_measurements[i]
             dist_target = self.target_measurements[i]
             width_target = 1
             if dist_target == 1:
@@ -264,8 +261,8 @@ class AgentGym:
             targets_claimed = np.array(self.claimed)
             self.claimed_plot = self.ax.scatter(targets_claimed[:,0], targets_claimed[:,1], color='r')
 
-        if self.num_enemies:
-            self.enemies.plot(self.ax)
+        
+        self.enemies.plot(self.ax)
         
         self.state_plot = self.ax.scatter(self.x, self.y, color='k')
         self.target_plot = self.ax.scatter(self.targets[0,:], self.targets[1,:], color='g')
@@ -285,7 +282,7 @@ class AgentGym:
         if self.save_figs:
             self.fig.savefig("images/frame{}".format(self.frame_number))
             self.frame_number +=1
-        plt.pause(0.2)
+        plt.pause(0.002)
 
     @staticmethod
     def wrap_angle_pi2pi(angle):
@@ -306,7 +303,7 @@ if __name__ == "__main__":
     # print(ret)
     # gym.plot()
 
-    gym = AgentGym(1, 20)
+    gym = AgentGym(1, 0)
     # gym.state[2] = 0.5
     done = 0
     while not done:
