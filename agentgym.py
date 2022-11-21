@@ -5,11 +5,12 @@ from scipy.integrate import odeint
 from enemy import Enemy
 
 class AgentGym:
-    def __init__(self, num_agents=1, num_enemies=0):
+    def __init__(self, num_agents=1, num_enemies=0, measure_enemies=True):
         self.init_state = np.array([[0.5,0.5,0]]).T
         self.state = np.tile(self.init_state, num_agents)
         self.num_agents = num_agents
         self.num_enemies = num_enemies
+        self.measure_enemies = measure_enemies
         self.num_targets = 10
         self.targets = np.zeros((2,self.num_targets))
 
@@ -34,11 +35,13 @@ class AgentGym:
 
         self.grid_side_length = 25
         self.grid_positions_visited = np.zeros((self.grid_side_length,self.grid_side_length))
-        
-        self.enemies = Enemy(self.dt, num_enemies)
-        self.enemy_radius = 0.03
-        self.caught_reward = -2000
-        self.enemy_measurements = np.zeros((self.sense_num_rays, num_agents))
+        if self.measure_enemies:
+            self.enemies = Enemy(self.dt, num_enemies)
+            self.enemy_radius = 0.03
+            self.caught_reward = -2000
+            self.enemy_measurements = np.zeros((self.sense_num_rays, num_agents))
+        else:
+            self.enemy_measurements = np.array([[]]).T
         
         # Setup figure
         self.save_figs = False
@@ -84,8 +87,8 @@ class AgentGym:
         self.reward = 0
         self.done = 0
         self.grid_positions_visited[:] = 0
-                  
-        self.enemies.reset()
+        if self.measure_enemies:            
+            self.enemies.reset()
         return self.full_state
 
 
@@ -96,8 +99,9 @@ class AgentGym:
         self.reset_measurements()
         self.propogate_state(omega)
         self.check_bounds_and_angles()
-        self.enemies.update()
-        self.search_enemies()
+        if self.measure_enemies:
+            self.enemies.update()
+            self.search_enemies()
         if not self.done:                
             self.search_targets()
         return (self.full_state.astype(np.float32),
@@ -215,15 +219,15 @@ class AgentGym:
 
     def reset_measurements(self):
         self.target_measurements = np.ones((self.sense_num_rays, self.num_agents))
-        
-        self.enemy_measurements = np.ones((self.sense_num_rays, self.num_agents))
+        if self.measure_enemies:
+            self.enemy_measurements = np.ones((self.sense_num_rays, self.num_agents))
     
     def plot_sensor_rays(self):
         ray_off_set = -self.target_sense_azimuth
         for i in range(self.sense_num_rays):
             dist_enemy = 1
-            
-            dist_enemy = self.enemy_measurements[i]
+            if self.num_enemies > 0:
+                dist_enemy = self.enemy_measurements[i]
             dist_target = self.target_measurements[i]
             width_target = 1
             if dist_target == 1:
@@ -261,8 +265,8 @@ class AgentGym:
             targets_claimed = np.array(self.claimed)
             self.claimed_plot = self.ax.scatter(targets_claimed[:,0], targets_claimed[:,1], color='r')
 
-        
-        self.enemies.plot(self.ax)
+        if self.measure_enemies:
+            self.enemies.plot(self.ax)
         
         self.state_plot = self.ax.scatter(self.x, self.y, color='k')
         self.target_plot = self.ax.scatter(self.targets[0,:], self.targets[1,:], color='g')
@@ -282,7 +286,7 @@ class AgentGym:
         if self.save_figs:
             self.fig.savefig("images/frame{}".format(self.frame_number))
             self.frame_number +=1
-        plt.pause(0.002)
+        plt.pause(0.02)
 
     @staticmethod
     def wrap_angle_pi2pi(angle):
@@ -303,7 +307,7 @@ if __name__ == "__main__":
     # print(ret)
     # gym.plot()
 
-    gym = AgentGym(1, 0)
+    gym = AgentGym(1, 20)
     # gym.state[2] = 0.5
     done = 0
     while not done:

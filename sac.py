@@ -290,11 +290,11 @@ if __name__ == '__main__':
     gamma = 0.99
     mdp = TargetAcquisitionEnvironment(1,.99, 1000)
 
-    experiment(alg=alg, mdp=mdp, n_epochs=3000, n_steps=5000, n_steps_test=2000)
+    # experiment(alg=alg, mdp=mdp, n_epochs=3000, n_steps=5000, n_steps_test=2000)
 
 
-    # agent = Agent.load('saved_models/best_undiscounted')
-    # core = Core(agent, mdp)
-    # core.evaluate(n_episodes=5, render=True)
+    agent = Agent.load('saved_models/best_undiscounted')
+    core = Core(agent, mdp)
+    core.evaluate(n_episodes=5, render=True)
 
     
