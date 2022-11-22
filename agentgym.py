@@ -4,6 +4,166 @@ from scipy.integrate import odeint
 
 from enemy import Enemy
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from mushroom_rl.core import Agent
+
+
+# class CriticNetwork(nn.Module):
+#     def __init__(self, input_shape, output_shape, n_features, state_shape, grid_shape, **kwargs):
+#         super().__init__()
+
+#         n_input = input_shape[-1]
+#         n_output = output_shape[0]
+
+#         self.num_states = state_shape
+#         self.num_grids = grid_shape
+
+#         # Grid process
+#         self.conv1 = nn.Conv2d(1, 6, 5)
+#         self.pool = nn.MaxPool2d(2, 2)
+#         self.conv2 = nn.Conv2d(6, 16, 5)
+#         self.fc1 = nn.Linear(144, 120)
+#         self.fc2 = nn.Linear(120, 84)
+#         self.fc3 = nn.Linear(84, 32)
+
+#         # State process
+#         self._h1 = nn.Linear(state_shape[0]+1, n_features)
+#         self._h2 = nn.Linear(n_features, n_features)
+#         self._h3 = nn.Linear(n_features, n_features)
+#         self._h4 = nn.Linear(n_features, 32)
+
+#         # Final process
+#         self._h5 = nn.Linear(64, n_features)
+#         self._h6 = nn.Linear(n_features, n_features)
+#         self._h7 = nn.Linear(n_features, n_features)
+#         self._h8 = nn.Linear(n_features, n_output)
+
+#         nn.init.xavier_uniform_(self._h1.weight,
+#                                 gain=nn.init.calculate_gain('relu'))
+#         nn.init.xavier_uniform_(self._h2.weight,
+#                                 gain=nn.init.calculate_gain('relu'))
+#         nn.init.xavier_uniform_(self._h3.weight,
+#                                 gain=nn.init.calculate_gain('relu'))
+#         nn.init.xavier_uniform_(self._h4.weight,
+#                                 gain=nn.init.calculate_gain('linear'))
+#         nn.init.xavier_uniform_(self._h5.weight,
+#                                 gain=nn.init.calculate_gain('relu'))
+#         nn.init.xavier_uniform_(self._h6.weight,
+#                                 gain=nn.init.calculate_gain('relu'))
+#         nn.init.xavier_uniform_(self._h7.weight,
+#                                 gain=nn.init.calculate_gain('relu'))
+#         nn.init.xavier_uniform_(self._h8.weight,
+#                                 gain=nn.init.calculate_gain('linear'))
+
+#     def forward(self, state, action):
+
+#         vehicle_state = state[:,:self.num_states[0]] 
+#         vehicle_action = torch.cat((vehicle_state.float(), action.float()), dim=1)
+#         grid_state = state[:, self.num_states[0]:]
+#         grid_state = grid_state.reshape((64, 1, 25, 25)).float()
+
+#         # Grid processing
+#         grid_state = self.pool(F.relu(self.conv1(grid_state)))
+#         grid_state = self.pool(F.relu(self.conv2(grid_state)))
+#         grid_state = torch.flatten(grid_state, 1) # flatten all dimensions except batch
+#         grid_state = F.relu(self.fc1(grid_state))
+#         grid_state = F.relu(self.fc2(grid_state))
+#         grid_out = self.fc3(grid_state)
+
+#         # State Processing
+#         features1 = F.relu(self._h1(vehicle_action))
+#         features2 = F.relu(self._h2(features1))
+#         features3 = F.relu(self._h3(features2))
+#         state_out = self._h4(features3)
+
+#         combined = torch.cat((grid_out.float(), state_out.float()), dim=1)
+
+#         # Combined process
+#         features1 = F.relu(self._h5(combined))
+#         features2 = F.relu(self._h6(features1))
+#         features3 = F.relu(self._h7(features2))
+#         combined_out = self._h8(features3)
+
+#         return torch.squeeze(combined_out)
+
+
+# class ActorNetwork(nn.Module):
+#     def __init__(self, input_shape, output_shape, n_features, state_shape, grid_shape, **kwargs):
+#         super(ActorNetwork, self).__init__()
+
+#         n_output = output_shape[0]
+
+#         self.num_states = state_shape
+#         self.num_grids = grid_shape
+
+#         # Grid process
+#         self.conv1 = nn.Conv2d(1, 6, 5)
+#         self.pool = nn.MaxPool2d(2, 2)
+#         self.conv2 = nn.Conv2d(6, 16, 5)
+#         self.fc1 = nn.Linear(144, 120)
+#         self.fc2 = nn.Linear(120, 84)
+#         self.fc3 = nn.Linear(84, 32)
+
+#         # State process
+#         self._h1 = nn.Linear(state_shape[0], n_features)
+#         self._h2 = nn.Linear(n_features, n_features)
+#         self._h3 = nn.Linear(n_features, n_features)
+#         self._h4 = nn.Linear(n_features, 32)
+
+#         # Final process
+#         self._h5 = nn.Linear(64, n_features)
+#         self._h6 = nn.Linear(n_features, n_features)
+#         self._h7 = nn.Linear(n_features, n_features)
+#         self._h8 = nn.Linear(n_features, n_output)
+
+#         nn.init.xavier_uniform_(self._h1.weight,
+#                                 gain=nn.init.calculate_gain('relu'))
+#         nn.init.xavier_uniform_(self._h2.weight,
+#                                 gain=nn.init.calculate_gain('relu'))
+#         nn.init.xavier_uniform_(self._h3.weight,
+#                                 gain=nn.init.calculate_gain('relu'))
+#         nn.init.xavier_uniform_(self._h4.weight,
+#                                 gain=nn.init.calculate_gain('linear'))
+#         nn.init.xavier_uniform_(self._h5.weight,
+#                                 gain=nn.init.calculate_gain('relu'))
+#         nn.init.xavier_uniform_(self._h6.weight,
+#                                 gain=nn.init.calculate_gain('relu'))
+#         nn.init.xavier_uniform_(self._h7.weight,
+#                                 gain=nn.init.calculate_gain('relu'))
+#         nn.init.xavier_uniform_(self._h8.weight,
+#                                 gain=nn.init.calculate_gain('linear'))
+
+#     def forward(self, state):
+#         vehicle_state = state[:,:self.num_states[0]].float() 
+#         grid_state = state[:, self.num_states[0]:]
+#         grid_state = grid_state.reshape((-1, 1, 25, 25)).float()
+
+#         # Grid processing
+#         grid_state = self.pool(F.relu(self.conv1(grid_state)))
+#         grid_state = self.pool(F.relu(self.conv2(grid_state)))
+#         grid_state = torch.flatten(grid_state, 1) # flatten all dimensions except batch
+#         grid_state = F.relu(self.fc1(grid_state))
+#         grid_state = F.relu(self.fc2(grid_state))
+#         grid_out = self.fc3(grid_state)
+
+#         # State Processing
+#         features1 = F.relu(self._h1(vehicle_state))
+#         features2 = F.relu(self._h2(features1))
+#         features3 = F.relu(self._h3(features2))
+#         state_out = self._h4(features3)
+
+#         combined = torch.cat((grid_out.float(), state_out.float()), dim=1)
+
+#         # Combined process
+#         features1 = F.relu(self._h5(combined))
+#         features2 = F.relu(self._h6(features1))
+#         features3 = F.relu(self._h7(features2))
+#         combined_out = self._h8(features3)
+
+#         return combined_out
+
 class AgentGym:
     def __init__(self, num_agents=1, num_enemies=0, measure_enemies=True):
         self.init_state = np.array([[0.5,0.5,0]]).T
@@ -38,7 +198,7 @@ class AgentGym:
         if self.measure_enemies:
             self.enemies = Enemy(self.dt, num_enemies)
             self.enemy_radius = 0.03
-            self.caught_reward = -2000
+            self.caught_reward = -4000
             self.enemy_measurements = np.zeros((self.sense_num_rays, num_agents))
         else:
             self.enemy_measurements = np.array([[]]).T
@@ -48,6 +208,9 @@ class AgentGym:
         self.frame_number = 0
         self.fig, self.ax = plt.subplots()
         self.state_plot = None
+
+        #prior
+        self.agent = Agent.load('saved_models_grid/best_undiscounted')
 
         # Setup sim
         self.init_targets()
@@ -75,7 +238,10 @@ class AgentGym:
     @property
     def full_state(self):
         # Agent states combined with measurements in one column vector
-        combined = np.concatenate((self.state, self.target_measurements, self.enemy_measurements, self.grid_positions_visited.reshape(-1,1)), axis=0).reshape(-1,1)
+        
+        temp_state = np.concatenate((self.state, self.target_measurements, self.grid_positions_visited.reshape(-1,1)), axis=0).reshape(-1,1)
+        action = self.agent.draw_action(temp_state)
+        combined = np.concatenate((action, self.enemy_measurements), axis=0).reshape(-1,1)
         return combined
 
     def reset(self, ):
@@ -111,7 +277,7 @@ class AgentGym:
     def propogate_state(self, omega):
         next = odeint(self.dynamics, self.state.flatten(), [0, self.dt], args=(omega[0], self.speed,))
         self.state[:,0] = next[1,:]
-        self.reward += self.time_reward
+        # self.reward += self.time_reward
 
     @staticmethod  
     def dynamics(x, t, omega, speed):
@@ -140,7 +306,7 @@ class AgentGym:
         
         if self.grid_positions_visited[grid_x_index, grid_y_index] != 1:
             self.grid_positions_visited[grid_x_index, grid_y_index] = 1
-            self.reward += 10
+            # self.reward += 10
         # else:
             # self.reward -= 10
 
@@ -307,7 +473,7 @@ if __name__ == "__main__":
     # print(ret)
     # gym.plot()
 
-    gym = AgentGym(1, 20)
+    gym = AgentGym(1, 0)
     # gym.state[2] = 0.5
     done = 0
     while not done:
