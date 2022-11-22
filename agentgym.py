@@ -5,7 +5,22 @@ from scipy.integrate import odeint
 from enemy import Enemy
 
 class AgentGym:
-    def __init__(self, num_agents=1, num_enemies=0):
+    def __init__(self, num_agents=1, num_enemies=0, file = 0):
+
+        #Grant's MC test stuff
+        self.save_mc_data = True
+        self.num_targets_history = []
+        self.save_mc_data_file = 'MC_TESTS/enemy_target_test/' + file + '/'
+        self.save_time_till_caught_file = 'MC_TESTS/enemy_time_to_caught_test/' + file + '/'
+        self.random_seed = 100
+        self.current_step_number = 0
+
+        np.random.seed(self.random_seed)
+        self.measure_enemy = True
+        self.bounce_flag = True
+
+
+
         self.init_state = np.array([[0.5,0.5,0]]).T
         self.state = np.tile(self.init_state, num_agents)
         self.num_agents = num_agents
@@ -36,7 +51,10 @@ class AgentGym:
             self.enemies = Enemy(self.dt, num_enemies)
             self.enemy_radius = 0.03
             self.caught_reward = -2000
-            self.enemy_measurements = np.zeros((self.sense_num_rays, num_agents))
+            if self.measure_enemy:
+                self.enemy_measurements = np.zeros((self.sense_num_rays, num_agents))
+            else:
+                self.enemy_measurements = np.array([[]]).T
         else:
             self.enemy_measurements = np.array([[]]).T
         
@@ -76,6 +94,15 @@ class AgentGym:
         return combined
 
     def reset(self, ):
+        if self.save_mc_data:
+            np.savetxt(self.save_mc_data_file + str(self.random_seed) + ".txt", np.array(self.num_targets_history))
+            self.num_targets_history = []
+            if not len(self.claimed) == self.num_targets:
+                np.savetxt(self.save_time_till_caught_file + str(self.random_seed) + ".txt" , np.array([self.current_step_number]))
+            self.current_step_number = 0
+            self.random_seed += 1
+            np.random.seed(self.random_seed)
+
         self.state = np.tile(self.init_state, self.num_agents)
         self.state[2] = np.random.uniform(-np.pi,np.pi)
         self.targets = np.zeros((2,self.num_targets))
@@ -89,20 +116,31 @@ class AgentGym:
 
 
     def step(self, omega):
+        
+        self.current_step_number += 1
         omega = np.clip(omega, -self.max_omega, self.max_omega) 
         # print(omega) 
         self.reward = 0
         self.reset_measurements()
         self.propogate_state(omega)
+        if self.bounce_flag:
+            self.bounce()
         self.check_bounds_and_angles()
+
         if self.num_enemies:
             self.enemies.update()
             self.search_enemies()
         if not self.done:                
             self.search_targets()
+
+        
+        if self.save_mc_data:
+            self.num_targets_history.append(len(self.claimed))
+        
         return (self.full_state.astype(np.float32),
                 np.array(self.reward, np.int32), 
                 np.array(self.done, np.int32))
+        
 
     def propogate_state(self, omega):
         next = odeint(self.dynamics, self.state.flatten(), [0, self.dt], args=(omega[0], self.speed,))
@@ -180,12 +218,12 @@ class AgentGym:
                 dist_to_target = np.linalg.norm(diff)
                 angle_to_target = np.arctan2(diff[1], diff[0])
                 measurement_angle = self.wrap_angle_pi2pi(angle_to_target - self.state[2, agent_i])
-                if(dist_to_target < self.target_sense_dist and abs(measurement_angle) < self.target_sense_azimuth):                    
+                if(dist_to_target < self.target_sense_dist and abs(measurement_angle) < self.target_sense_azimuth) and self.measure_enemy:                    
                     self.add_measurement(measurement_angle, dist_to_target, agent_i, self.enemy_measurements)
 
-                    if (dist_to_target < self.enemy_radius):
-                        self.reward += self.caught_reward
-                        self.done = 1
+                if (dist_to_target < self.enemy_radius):
+                    self.reward += self.caught_reward
+                    self.done = 1
                 
     def init_targets(self):
         self.targets = np.random.uniform(size=self.targets.shape, low=0.1, high=0.9)        
@@ -202,14 +240,14 @@ class AgentGym:
 
     def reset_measurements(self):
         self.target_measurements = np.ones((self.sense_num_rays, self.num_agents))
-        if self.num_enemies:
+        if self.measure_enemy:
             self.enemy_measurements = np.ones((self.sense_num_rays, self.num_agents))
     
     def plot_sensor_rays(self):
         ray_off_set = -self.target_sense_azimuth
         for i in range(self.sense_num_rays):
             dist_enemy = 1
-            if self.num_enemies > 0:
+            if self.num_enemies > 0 and self.measure_enemy:
                 dist_enemy = self.enemy_measurements[i]
             dist_target = self.target_measurements[i]
             width_target = 1
@@ -286,7 +324,6 @@ if __name__ == "__main__":
         ret = gym.step(np.array([omega]))
         done = ret[2]
         print(ret)
-        gym.plot()
         # plt.pause(0.1)
 
     gym.reset()

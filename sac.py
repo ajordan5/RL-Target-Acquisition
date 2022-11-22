@@ -174,13 +174,13 @@ if __name__ == '__main__':
     alg = SAC
     horizon = 1000
     gamma = 0.99
-    mdp = TargetAcquisitionEnvironment(1,.99, 1000)
+    mdp = TargetAcquisitionEnvironment(1,.99, 1000, file = 'tmp')
 
-    # experiment(alg=alg, mdp=mdp, n_epochs=100, n_steps=5000, n_steps_test=2000)
+    experiment(alg=alg, mdp=mdp, n_epochs=100, n_steps=5000, n_steps_test=2000)
 
 
-    agent = Agent.load('saved_models/model0')
-    core = Core(agent, mdp)
-    core.evaluate(n_episodes=5, render=True)
+    # agent = Agent.load('saved_models/enemy_no_gird')
+    # core = Core(agent, mdp)
+    # core.evaluate(n_episodes=5, render=True)
 
     

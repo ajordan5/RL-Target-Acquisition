@@ -3,5 +3,6 @@
 /model
 /summaries
 /saved_models
+/MC_TESTS
 __pycache__/
 *.pyc

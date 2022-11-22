@@ -4,9 +4,9 @@ from mushroom_rl.utils.spaces import Box
 from agentgym import AgentGym
 
 class TargetAcquisitionEnvironment(Environment):
-    def __init__(self, num_agents, gamma, horizon):
+    def __init__(self, num_agents, gamma, horizon, file):
 
-        self.agentGym = AgentGym(num_agents, 0)
+        self.agentGym = AgentGym(num_agents, 5, file)
 
         action_space = Box(-self.agentGym.max_omega,self.agentGym.max_omega,(self.agentGym.actions,))
 
