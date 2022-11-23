@@ -98,8 +98,8 @@ def plot_num_targets(directory):
 
     
 if __name__ == "__main__":
-    directory = '/home/grant/repos/github/RL-Target-Acquisition/MC_TESTS/enemy_time_to_caught_test'
-    plot_time_data(directory)
-    # directory = '/home/grant/repos/github/RL-Target-Acquisition/MC_TESTS/no_enemy_target_test'
-    # plot_num_targets(directory)
+    # directory = '/home/grant/repos/github/RL-Target-Acquisition/MC_TESTS/enemy_time_to_caught_test'
+    # plot_time_data(directory)
+    directory = '/home/grant/repos/github/RL-Target-Acquisition/MC_TESTS/enemy_target_test'
+    plot_num_targets(directory)
     # run_MC_test(num_mc_runs=101, horizon=1000, file='enemy_no_grid_grant')
