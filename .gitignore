@@ -6,3 +6,5 @@
 /MC_TESTS
 __pycache__/
 *.pyc
+*.out
+

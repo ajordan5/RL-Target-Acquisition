@@ -43,18 +43,17 @@ class AgentGym:
         self.reward = 0     # int32 reward that increments with each step
         self.done = 0       # int32 flip to one if sim reaches end criteria
         self.time_reward = -10
-        self.exit_reward = -1000
+        self.exit_reward = -4000
         self.target_reward = 500
         self.num_actions = num_agents #number of inputs for agents
 
-        if num_enemies:
+        self.grid_side_length = 25
+        self.grid_positions_visited = np.zeros((self.grid_side_length,self.grid_side_length))
+        if self.measure_enemies:
             self.enemies = Enemy(self.dt, num_enemies)
             self.enemy_radius = 0.03
             self.caught_reward = -2000
-            if self.measure_enemy:
-                self.enemy_measurements = np.zeros((self.sense_num_rays, num_agents))
-            else:
-                self.enemy_measurements = np.array([[]]).T
+            self.enemy_measurements = np.zeros((self.sense_num_rays, num_agents))
         else:
             self.enemy_measurements = np.array([[]]).T
         
@@ -90,7 +89,7 @@ class AgentGym:
     @property
     def full_state(self):
         # Agent states combined with measurements in one column vector
-        combined = np.concatenate((self.state, self.target_measurements, self.enemy_measurements), axis=0).reshape(-1,1)
+        combined = np.concatenate((self.state, self.target_measurements, self.enemy_measurements, self.grid_positions_visited.reshape(-1,1)), axis=0).reshape(-1,1)
         return combined
 
     def reset(self, ):
@@ -110,7 +109,8 @@ class AgentGym:
         self.claimed = []
         self.reward = 0
         self.done = 0
-        if self.num_enemies:            
+        self.grid_positions_visited[:] = 0
+        if self.measure_enemies:            
             self.enemies.reset()
         return self.full_state
 
@@ -126,8 +126,7 @@ class AgentGym:
         if self.bounce_flag:
             self.bounce()
         self.check_bounds_and_angles()
-
-        if self.num_enemies:
+        if self.measure_enemies:
             self.enemies.update()
             self.search_enemies()
         if not self.done:                
@@ -164,6 +163,19 @@ class AgentGym:
             if(x_i > 1 or x_i < 0 or y_i > 1 or y_i < 0):
                 self.done = 1
                 self.reward += self.exit_reward
+            else:
+                self.record_grid_position()
+
+    def record_grid_position(self):
+        grid_x_index = int(np.floor(self.x * self.grid_side_length))
+        grid_y_index = int(np.floor(self.y * self.grid_side_length))
+
+        
+        if self.grid_positions_visited[grid_x_index, grid_y_index] != 1:
+            self.grid_positions_visited[grid_x_index, grid_y_index] = 1
+            self.reward += 10
+        # else:
+            # self.reward -= 10
 
 
     def bounce(self):
@@ -218,12 +230,12 @@ class AgentGym:
                 dist_to_target = np.linalg.norm(diff)
                 angle_to_target = np.arctan2(diff[1], diff[0])
                 measurement_angle = self.wrap_angle_pi2pi(angle_to_target - self.state[2, agent_i])
-                if(dist_to_target < self.target_sense_dist and abs(measurement_angle) < self.target_sense_azimuth) and self.measure_enemy:                    
+                if(dist_to_target < self.target_sense_dist and abs(measurement_angle) < self.target_sense_azimuth):                    
                     self.add_measurement(measurement_angle, dist_to_target, agent_i, self.enemy_measurements)
 
-                if (dist_to_target < self.enemy_radius):
-                    self.reward += self.caught_reward
-                    self.done = 1
+                    if (dist_to_target < self.enemy_radius):
+                        self.reward += self.caught_reward
+                        self.done = 1
                 
     def init_targets(self):
         self.targets = np.random.uniform(size=self.targets.shape, low=0.1, high=0.9)        
@@ -240,14 +252,14 @@ class AgentGym:
 
     def reset_measurements(self):
         self.target_measurements = np.ones((self.sense_num_rays, self.num_agents))
-        if self.measure_enemy:
+        if self.measure_enemies:
             self.enemy_measurements = np.ones((self.sense_num_rays, self.num_agents))
     
     def plot_sensor_rays(self):
         ray_off_set = -self.target_sense_azimuth
         for i in range(self.sense_num_rays):
             dist_enemy = 1
-            if self.num_enemies > 0 and self.measure_enemy:
+            if self.num_enemies > 0:
                 dist_enemy = self.enemy_measurements[i]
             dist_target = self.target_measurements[i]
             width_target = 1
@@ -286,16 +298,28 @@ class AgentGym:
             targets_claimed = np.array(self.claimed)
             self.claimed_plot = self.ax.scatter(targets_claimed[:,0], targets_claimed[:,1], color='r')
 
-        if self.num_enemies:
+        if self.measure_enemies:
             self.enemies.plot(self.ax)
         
         self.state_plot = self.ax.scatter(self.x, self.y, color='k')
         self.target_plot = self.ax.scatter(self.targets[0,:], self.targets[1,:], color='g')
         
+        for i in range(self.grid_positions_visited.shape[0]):
+            for j in range(self.grid_positions_visited.shape[1]):
+                cell = self.grid_positions_visited[i,j]
+                if cell == 1:
+                    
+                    left_bound = i / self.grid_side_length
+                    right_bound = (i + 1) / self.grid_side_length
+                    bottom_bound = j / self.grid_side_length
+                    top_bound = (j + 1) / self.grid_side_length
+
+                    self.ax.fill_between([left_bound, right_bound], [top_bound, top_bound], [bottom_bound, bottom_bound], alpha = .2, color="tab:blue")
+
         if self.save_figs:
             self.fig.savefig("images/frame{}".format(self.frame_number))
             self.frame_number +=1
-        plt.pause(0.2)
+        plt.pause(0.02)
 
     @staticmethod
     def wrap_angle_pi2pi(angle):
@@ -324,6 +348,7 @@ if __name__ == "__main__":
         ret = gym.step(np.array([omega]))
         done = ret[2]
         print(ret)
+        gym.plot()
         # plt.pause(0.1)
 
     gym.reset()
