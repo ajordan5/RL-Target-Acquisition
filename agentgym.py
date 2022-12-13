@@ -196,10 +196,6 @@ class AgentGym:
         ray_i = int(np.round((self.target_sense_azimuth+angle)/self.target_sense_increment))
         measurement_array[ray_i, agent_i] = distance
 
-    # def add_enemy_measurement(self, angle, distance, agent_i):
-    #     ray_i = int(np.round((self.target_sense_azimuth+angle)/self.target_sense_increment))
-    #     self.enemy_measurements[ray_i, agent_i] = distance
-
     def reset_measurements(self):
         self.target_measurements = np.ones((self.sense_num_rays, self.num_agents))
         if self.num_enemies:
@@ -273,13 +269,8 @@ class AgentGym:
         return angle
 
 if __name__ == "__main__":
-    # gym = AgentGym(3)
-    # ret = gym.step(np.array([1, 2, 3]))
-    # print(ret)
-    # gym.plot()
-
+    # Run the gym a few times with random inputs
     gym = AgentGym(1, 20)
-    # gym.state[2] = 0.5
     done = 0
     while not done:
         omega  = np.random.normal(0, 1)
@@ -287,7 +278,6 @@ if __name__ == "__main__":
         done = ret[2]
         print(ret)
         gym.plot()
-        # plt.pause(0.1)
 
     gym.reset()
     done = 0
@@ -297,4 +287,3 @@ if __name__ == "__main__":
         done = ret[2]
         print(ret)
         gym.plot()
-        # plt.pause(0.1)
